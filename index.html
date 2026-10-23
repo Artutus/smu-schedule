@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- тёмный холст ещё до разбора тяжёлого Telegram-скрипта, чтобы не мигало белым -->
+<style id="boot-theme">html{background:#0c0d12;color-scheme:dark}</style>
+<script>try{document.documentElement.dataset.theme='dark'}catch(e){}</script>
 <script id="tg-vendor">/* telegram-web-app.js — telegram.org/js/telegram-web-app.js */
 // WebView
 (function () {
@@ -3495,6 +3498,37 @@
 })();
 
 </script>
+<!-- тема до первой отрисовки: иначе на телефоне видна вспышка светлой панели -->
+<script id="early-theme">
+(function () {
+  // По умолчанию тёмная. Светлую включаем только если Telegram реально
+  // прислал светлый themeParams.bg_color. Пока тема не пришла, colorScheme
+  // часто равен 'light' просто как значение по умолчанию — ему верить нельзя.
+  var scheme = 'dark';
+  try { var cached = localStorage.getItem('smus-theme'); if (cached === 'light' || cached === 'dark') scheme = cached; } catch (e) {}
+  function isDark(hex) {
+    var m = /^#([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return true;
+    var n = parseInt(m[1], 16);
+    return ((n >> 16 & 255) * 299 + (n >> 8 & 255) * 587 + (n & 255) * 114) / 1000 < 128;
+  }
+  try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var bg = tg && tg.themeParams && tg.themeParams.bg_color;
+    if (bg) scheme = isDark(bg) ? 'dark' : 'light';
+    else if (tg && tg.colorScheme === 'dark') scheme = 'dark';
+    var c = scheme === 'light' ? '#f4f5fa' : '#0c0d12';
+    try { tg && tg.setBackgroundColor && tg.setBackgroundColor(c); } catch (e) {}
+    try { tg && tg.setHeaderColor && tg.setHeaderColor(c); } catch (e) {}
+  } catch (e) {}
+  document.documentElement.dataset.theme = scheme;
+  try { localStorage.setItem('smus-theme', scheme); } catch (e) {}
+})();
+</script>
+<style id="critical-theme">
+html{background:#0c0d12;color-scheme:dark}
+html[data-theme="light"]{background:#f4f5fa;color-scheme:light}
+</style>
 <meta name="theme-color" content="#0d0e13">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3668,6 +3702,7 @@ select:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:2px 
 .dayfilter{
   display:flex;gap:6px;margin-top:14px;padding-bottom:2px;
   overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  touch-action:pan-x pinch-zoom;
 }
 .dayfilter::-webkit-scrollbar{display:none}
 .dayfilter .chip{flex:0 0 auto;min-width:0;padding:7px 11px;font-size:13px;border-radius:10px}
@@ -3740,8 +3775,10 @@ nav.bottom button[aria-current="page"] svg{stroke:var(--accent)}
 @keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 #view.enter-right{animation:viewInRight .3s cubic-bezier(.22,.61,.36,1) both}
 #view.enter-left{animation:viewInLeft .3s cubic-bezier(.22,.61,.36,1) both}
+#view{touch-action:pan-y pinch-zoom}
 #view.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
-#view.dragging .pair,#view.dragging .sres{transition:none}
+#view.dragging .pair,#view.dragging .sres{transition:none;transform:none}
+.swipe-ghost{will-change:transform}
 #view.anim > *{animation:riseIn .42s cubic-bezier(.22,.61,.36,1) both}
 #view.anim > *:nth-child(2){animation-delay:.04s}
 #view.anim > *:nth-child(3){animation-delay:.08s}
@@ -4487,11 +4524,30 @@ $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
   const TABS = ['today', 'week', 'search', 'info'];
   const SKIP = 'input, textarea, select, option, [contenteditable="true"], .dayfilter';
   const view = $('#view');
-  let sx = 0, sy = 0, tracking = false, dragging = false, lastX = 0;
-  let suppressClick = false, clickTimer = 0, resetTimer = 0, slideTimer = 0;
+  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+  const EASE = 'cubic-bezier(.22,.61,.36,1)';
+  const DUR = 320;
+
+  let sx = 0, sy = 0, tracking = false, dragging = false, lastX = 0, baseX = 0;
+  let suppressClick = false, clickTimer = 0, resetTimer = 0;
+  let slideSeq = 0, viewAnim = null;
 
   const width = () => Math.min(window.innerWidth || 360, 680);
   const tabIndex = () => TABS.indexOf(state.tab);
+  const cancelAnim = () => {
+    if (viewAnim) { try { viewAnim.cancel(); } catch (err) {} viewAnim = null; }
+  };
+  const currentX = () => {
+    try {
+      const t = getComputedStyle(view).transform;
+      if (t && t !== 'none') return new DOMMatrixReadOnly(t).m41 || 0;
+    } catch (err) {}
+    return 0;
+  };
+  const naturalOpacity = el => {
+    const v = parseFloat(getComputedStyle(el).opacity);
+    return isFinite(v) ? v : 1;
+  };
 
   function resetStyles() {
     clearTimeout(resetTimer);
@@ -4499,13 +4555,117 @@ $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
     view.style.transition = '';
     view.style.transform = '';
     view.style.opacity = '';
+    view.style.animation = '';
+    view.style.willChange = '';
+  }
+
+  /* общее начало жеста (touch и mouse/pointer) */
+  function begin(x, y, target) {
+    if (tracking) return;
+    if (target && target.closest && target.closest(SKIP)) return;
+    clearTimeout(clickTimer);
+    suppressClick = false;
+    sx = x; sy = y;
+    tracking = true; dragging = false;
+  }
+
+  function move(x, y, e) {
+    if (!tracking) return;
+    const dx = x - sx, dy = y - sy;
+    if (!dragging) {
+      if (Math.abs(dx) < 8) return;
+      if (Math.abs(dx) <= Math.abs(dy) * 1.2) return; // жест больше похож на вертикальный скролл
+      dragging = true;
+      suppressClick = true;
+      document.querySelectorAll('.swipe-ghost').forEach(g => g.remove());
+      if (viewAnim) {
+        // предыдущий переход ещё едет — мгновенно доводим его до конца,
+        // чтобы не тащить панель из-за края экрана
+        cancelAnim();
+        view.style.transition = 'none';
+        view.style.transform = 'translate3d(0px,0,0)';
+        view.style.opacity = '';
+        baseX = 0;
+      } else {
+        // если панель ещё ехала после прошлого переключения — подхватываем её на месте
+        baseX = currentX();
+        cancelAnim();
+        view.style.transition = 'none';
+        view.style.transform = `translate3d(${baseX}px,0,0)`;
+        view.style.opacity = '';
+      }
+      clearTimeout(resetTimer);
+      slideSeq++;
+      view.style.willChange = 'transform';
+      view.classList.remove('enter-left', 'enter-right', 'anim');
+      view.classList.add('dragging');
+    }
+    if (e && e.cancelable) e.preventDefault(); // не даём странице/WebView утащить жест
+    const i = tabIndex();
+    const edge = (dx < 0 && i >= TABS.length - 1) || (dx > 0 && i <= 0);
+    const max = width() * 0.72;
+    const x2 = Math.max(-max, Math.min(max, baseX + dx * (edge ? 0.26 : 1)));
+    lastX = x2;
+    view.style.transform = `translate3d(${x2}px,0,0)`;
+  }
+
+  function end(x, y) {
+    if (!tracking) return;
+    tracking = false;
+    const wasDragging = dragging;
+    dragging = false;
+    if (!wasDragging) return;
+
+    clickTimer = setTimeout(() => { suppressClick = false; }, 350);
+
+    const dx = x - sx, dy = y - sy;
+    const i = tabIndex();
+    const threshold = Math.min(96, width() * 0.2);
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+    const canMove = (dx < 0 && i < TABS.length - 1) || (dx > 0 && i > 0);
+
+    if (horizontal && Math.abs(dx) > threshold && canMove) {
+      slideTo(dx < 0 ? i + 1 : i - 1, dx < 0 ? 'right' : 'left', lastX);
+    } else {
+      snapBack();
+    }
+  }
+
+  function cancel() {
+    if (!tracking) return;
+    const wasDragging = dragging;
+    tracking = false;
+    dragging = false;
+    if (wasDragging) snapBack();
   }
 
   function snapBack() {
-    view.style.transition = 'transform .3s cubic-bezier(.22,.61,.36,1)';
-    view.style.transform = '';
-    view.style.opacity = '';
-    resetTimer = setTimeout(resetStyles, 320);
+    const from = lastX;
+    cancelAnim();
+    if (typeof view.animate === 'function') {
+      const seq = slideSeq;
+      const a = view.animate(
+        [{ transform: `translate3d(${from}px,0,0)` }, { transform: 'translate3d(0px,0,0)' }],
+        { duration: 300, easing: EASE, fill: 'forwards' }
+      );
+      viewAnim = a;
+      let done = false;
+      const finish = () => {
+        if (done || seq !== slideSeq) return;
+        done = true;
+        viewAnim = null;
+        view.style.transform = '';
+        try { a.cancel(); } catch (err) {}
+        resetStyles();
+      };
+      a.finished.then(finish).catch(() => {});
+      setTimeout(finish, 700);
+    } else {
+      view.style.transition = 'transform .3s ' + EASE;
+      view.style.transform = '';
+      view.style.opacity = '';
+      resetTimer = setTimeout(resetStyles, 320);
+    }
   }
 
   function haptic() {
@@ -4513,8 +4673,11 @@ $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
   }
 
   // точная копия текущей панели поверх страницы: она уезжает, открывая новую вкладку
-  function makeGhost(x) {
-    const rect = view.getBoundingClientRect();
+  function makeGhost(x, rawRect) {
+    // rect снимаем до сброса transform: вычитаем текущий сдвиг,
+    // иначе панель-клон окажется смещённой вдвое и «прыгнет» на краю
+    const raw = rawRect || view.getBoundingClientRect();
+    const rect = { left: raw.left - x, top: raw.top, width: raw.width };
     const ghost = view.cloneNode(true);
     ghost.removeAttribute('id');
     ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
@@ -4539,7 +4702,7 @@ $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
       padding: '0',
       pointerEvents: 'none',
       zIndex: '25',
-      transform: `translateX(${x}px)`,
+      transform: `translate3d(${x}px,0,0)`,
       transition: 'none'
     });
     document.body.appendChild(ghost);
@@ -4548,104 +4711,155 @@ $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
 
   function slideTo(next, dir, x) {
     document.querySelectorAll('.swipe-ghost').forEach(g => g.remove());
-    const { ghost, rect } = makeGhost(x);
-    const W = rect.width;
-    const newStart = dir === 'right' ? x + W : x - W;
-    const ghostEnd = x - newStart;
-
-    state.tab = TABS[next];
-    persist();
-    render(dir);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    cancelAnim();
+    const seq = ++slideSeq;
     haptic();
 
-    // новая вкладка стоит вплотную к старой и едет вместе с ней — как в карусели
-    view.classList.remove('enter-left', 'enter-right', 'anim');
-    view.style.animation = 'none';
+    // Панель уже сдвинута пальцем. Гасим её целиком, без второй копии
+    // и без отдельных «пляшущих» карточек — так ничего не дёргается.
+    view.classList.remove('dragging', 'enter-left', 'enter-right', 'anim');
     view.style.transition = 'none';
-    view.style.transform = `translateX(${newStart}px)`;
-    void view.offsetWidth;
+    view.style.willChange = 'opacity';
+    view.style.transform = `translate3d(${x}px,0,0)`;
+    view.style.opacity = '1';
 
-    const ease = 'transform .32s cubic-bezier(.22,.61,.36,1)';
-    ghost.style.transition = ease;
-    ghost.style.transform = `translateX(${ghostEnd}px)`;
-    view.style.transition = ease;
-    view.style.transform = 'translateX(0)';
+    let fadeOut = null, shown = false;
 
-    setTimeout(() => ghost.remove(), 420);
-    clearTimeout(slideTimer);
-    slideTimer = setTimeout(() => {
-      view.style.transition = '';
+    function showNew() {
+      if (shown || seq !== slideSeq) return;
+      shown = true;
+
+      // снимаем старую анимацию, иначе её fill:forwards может
+      // снова погасить панель после завершения новой
+      if (fadeOut) { try { fadeOut.cancel(); } catch (err) {} fadeOut = null; viewAnim = null; }
+
+      // меняем содержимое, пока старая панель полностью прозрачна
+      view.style.opacity = '0';
       view.style.transform = '';
-      view.style.animation = '';
-      view.style.opacity = '';
-    }, 380);
+      state.tab = TABS[next];
+      persist();
+      render();
+      view.classList.remove('enter-left', 'enter-right', 'anim');
+      window.scrollTo(0, 0); // мгновенно, без «подъезжающего» скролла
+      view.style.opacity = '0';
+      void view.offsetWidth;
+
+      if (typeof view.animate !== 'function') {
+        // запасной вариант без WAAPI
+        view.style.transition = 'opacity 210ms ' + EASE;
+        view.style.opacity = '1';
+        setTimeout(() => {
+          if (seq !== slideSeq) return;
+          view.style.transition = '';
+          view.style.opacity = '';
+          view.style.willChange = '';
+        }, 240);
+        return;
+      }
+
+      // новая панель проявляется целиком...
+      const fadeIn = view.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 210, easing: EASE, fill: 'forwards' }
+      );
+      viewAnim = fadeIn;
+
+      // ...а карточки догоняют её лёгкой лесенкой сверху вниз.
+      // Только прозрачность: никаких сдвигов, поэтому нет тряски.
+      const kids = Array.from(view.children).map((el, i) => el.animate(
+        [{ opacity: 0 }, { opacity: naturalOpacity(el) }],
+        { duration: 190, delay: Math.min(i, 6) * 32, easing: EASE, fill: 'both' }
+      ));
+
+      const all = [fadeIn].concat(kids);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (seq === slideSeq) {
+          viewAnim = null;
+          view.style.transform = '';
+          view.style.opacity = '';
+          view.style.transition = '';
+          view.style.animation = '';
+          view.style.willChange = '';
+        }
+        all.forEach(a => { try { a.cancel(); } catch (err) {} });
+      };
+      Promise.allSettled(all.map(a => a.finished)).then(finish);
+      setTimeout(finish, 900); // страховка, если анимация не доиграет
+    }
+
+    if (typeof view.animate === 'function') {
+      try {
+        fadeOut = view.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: 170, easing: 'ease-out', fill: 'forwards' }
+        );
+        viewAnim = fadeOut;
+        fadeOut.finished.then(showNew).catch(() => {});
+        // страховка: даже если анимация не доиграет, вкладка всё равно переключится
+        setTimeout(showNew, 220);
+        return;
+      } catch (err) {
+        fadeOut = null;
+        viewAnim = null;
+      }
+    }
+
+    // запасной вариант без WAAPI
+    view.style.transition = 'opacity 170ms ease-out';
+    view.style.opacity = '0';
+    setTimeout(() => {
+      if (seq !== slideSeq) { view.style.transition = ''; return; }
+      showNew();
+    }, 180);
   }
 
   window.__slideTo = slideTo;
 
+  /* --- touch: работает в WebView Telegram, даже если pointer-события гасятся --- */
+  view.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    begin(t.clientX, t.clientY, e.target);
+  }, { passive: true });
+
+  view.addEventListener('touchmove', e => {
+    if (!tracking || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    move(t.clientX, t.clientY, e);
+  }, { passive: false });
+
+  window.addEventListener('touchend', e => {
+    if (!tracking) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) { cancel(); return; }
+    end(t.clientX, t.clientY);
+  }, { passive: true });
+
+  window.addEventListener('touchcancel', cancel, { passive: true });
+
+  /* --- mouse / pen: pointer-события (touch ведём отдельно) --- */
   view.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch' && hasTouch) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (e.target.closest(SKIP)) return;
-    clearTimeout(resetTimer);
-    clearTimeout(clickTimer);
-    clearTimeout(slideTimer);
-    suppressClick = false;
-    sx = e.clientX; sy = e.clientY;
-    tracking = true; dragging = false;
-    view.classList.remove('dragging', 'enter-left', 'enter-right', 'anim');
-    view.style.transition = '';
-    view.style.transform = '';
-    view.style.opacity = '';
+    begin(e.clientX, e.clientY, e.target);
   });
 
-  view.addEventListener('pointermove', e => {
-    if (!tracking) return;
-    const dx = e.clientX - sx, dy = e.clientY - sy;
-    if (!dragging) {
-      if (Math.abs(dx) < 7) return;
-      if (Math.abs(dx) <= Math.abs(dy) * 1.2) return; // жест больше похож на вертикальный скролл
-      dragging = true;
-      suppressClick = true;
-      document.querySelectorAll('.swipe-ghost').forEach(g => g.remove());
-      view.classList.add('dragging');
-      view.style.transition = 'none';
-    }
-    const i = tabIndex();
-    const edge = (dx < 0 && i >= TABS.length - 1) || (dx > 0 && i <= 0);
-    const max = width() * 0.72;
-    const x = Math.max(-max, Math.min(max, dx * (edge ? 0.26 : 1)));
-    lastX = x;
-    view.style.transform = `translateX(${x}px)`;
+  window.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' && hasTouch) return;
+    move(e.clientX, e.clientY, e);
   });
 
   window.addEventListener('pointerup', e => {
-    if (!tracking) return;
-    tracking = false;
-    const wasDragging = dragging;
-    dragging = false;
-    if (!wasDragging) return;
-
-    clickTimer = setTimeout(() => { suppressClick = false; }, 300);
-
-    const dx = e.clientX - sx, dy = e.clientY - sy;
-    const i = tabIndex();
-    const threshold = Math.min(96, width() * 0.2);
-    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
-    const canMove = (dx < 0 && i < TABS.length - 1) || (dx > 0 && i > 0);
-
-    if (horizontal && Math.abs(dx) > threshold && canMove) {
-      slideTo(dx < 0 ? i + 1 : i - 1, dx < 0 ? 'right' : 'left', lastX);
-    } else {
-      snapBack();
-    }
+    if (e.pointerType === 'touch' && hasTouch) return;
+    end(e.clientX, e.clientY);
   });
 
-  window.addEventListener('pointercancel', () => {
-    if (!tracking) return;
-    tracking = false;
-    dragging = false;
-    snapBack();
+  window.addEventListener('pointercancel', e => {
+    if (e.pointerType === 'touch' && hasTouch) return;
+    cancel();
   });
 
   // после протягивания не даём случайному клику открыть карточку
@@ -4676,15 +4890,29 @@ setInterval(() => {
 (function () {
   'use strict';
 
+  function isDarkColor(hex) {
+    var m = /^#([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return true;
+    var n = parseInt(m[1], 16);
+    return ((n >> 16 & 255) * 299 + (n >> 8 & 255) * 587 + (n & 255) * 114) / 1000 < 128;
+  }
+
   function applyTheme(tg) {
-    if (!tg.colorScheme) return;
-    document.documentElement.dataset.theme = tg.colorScheme;
+    // доверяем только реально пришедшим themeParams: colorScheme по
+    // умолчанию бывает 'light' ещё до ответа Telegram, из-за этого
+    // тёмная тема сначала становилась светлой, а потом резко темнела
+    var bgParam = tg.themeParams && tg.themeParams.bg_color;
+    var scheme = null;
+    if (bgParam) scheme = isDarkColor(bgParam) ? 'dark' : 'light';
+    else if (tg.colorScheme === 'dark') scheme = 'dark';
+    if (!scheme) return;
+
+    document.documentElement.dataset.theme = scheme;
+    try { localStorage.setItem('smus-theme', scheme); } catch (e) {}
     try {
-      var css = getComputedStyle(document.documentElement);
-      var bg = css.getPropertyValue('--bg').trim();
-      if (!bg) bg = tg.colorScheme === 'light' ? '#f4f5fa' : '#0c0d12';
-      tg.setHeaderColor(bg);
-      tg.setBackgroundColor(bg);
+      var c = scheme === 'light' ? '#f4f5fa' : '#0c0d12';
+      tg.setHeaderColor(c);
+      tg.setBackgroundColor(c);
     } catch (e) {}
   }
 
