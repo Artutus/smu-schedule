@@ -3504,7 +3504,7 @@
   color-scheme: dark light;
   --bg:#0c0d12; --bg2:#111320; --card:#171a25; --card2:#1e2231;
   --line:#272b3a; --fg:#eef0f7; --muted:#98a0b4; --dim:#6f7789;
-  --accent:#8b7bff; --accent2:#3d5afe; --accent-soft:#8b7bff22;
+  --accent:#6d78ff; --accent2:#3638fd; --accent-soft:#6d78ff26;
   --ok:#3ddc97; --warn:#ffb454; --danger:#ff6b81;
   --radius:18px; --shadow:0 10px 30px -18px #000;
 }
@@ -3512,7 +3512,7 @@
   :root:not([data-theme="dark"]){
     --bg:#f4f5fa; --bg2:#eceef7; --card:#ffffff; --card2:#f7f8fd;
     --line:#e3e6f0; --fg:#131623; --muted:#5d6478; --dim:#8a90a3;
-    --accent:#5b4bff; --accent2:#2f45d8; --accent-soft:#5b4bff14;
+    --accent:#3638fd; --accent2:#2426c4; --accent-soft:#3638fd14;
     --shadow:0 12px 28px -22px #1b1f33;
   }
 }
@@ -3520,13 +3520,13 @@
 html[data-theme="light"]{
   --bg:#f4f5fa; --bg2:#eceef7; --card:#ffffff; --card2:#f7f8fd;
   --line:#e3e6f0; --fg:#131623; --muted:#5d6478; --dim:#8a90a3;
-  --accent:#5b4bff; --accent2:#2f45d8; --accent-soft:#5b4bff14;
+  --accent:#3638fd; --accent2:#2426c4; --accent-soft:#3638fd14;
   --shadow:0 12px 28px -22px #1b1f33;
   color-scheme: light;
 }
 html[data-theme="dark"]{color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;overflow-x:clip}
 body{
   background:
     radial-gradient(1100px 500px at 8% -10%, var(--accent-soft), transparent 60%),
@@ -3552,8 +3552,8 @@ header.top{
 .brand{display:flex;align-items:center;gap:10px}
 .logo{
   width:32px;height:32px;border-radius:10px;flex:none;
+  object-fit:cover;display:block;
   background:linear-gradient(140deg,var(--accent),var(--accent2));
-  display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;
   box-shadow:0 6px 18px -8px var(--accent);
 }
 .brand h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
@@ -3573,6 +3573,7 @@ select{
   width:100%;appearance:none;background:var(--card2);color:var(--fg);
   border:1px solid var(--line);border-radius:12px;padding:11px 38px 11px 12px;
   font:inherit;font-weight:600;font-size:14px;cursor:pointer;
+  transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
 select:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
@@ -3580,8 +3581,10 @@ select:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:2px 
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{
   appearance:none;border:1px solid var(--line);background:var(--card2);color:var(--muted);
-  font:inherit;font-weight:600;font-size:14px;min-width:42px;padding:9px 12px;border-radius:11px;cursor:pointer;transition:.15s;
+  font:inherit;font-weight:600;font-size:14px;min-width:42px;padding:9px 12px;border-radius:11px;cursor:pointer;
+  transition:transform .15s ease, background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
 }
+.chip:active{transform:scale(.95)}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:transparent;color:#fff;box-shadow:0 6px 16px -10px var(--accent)}
 .chip:hover:not([aria-pressed="true"]){border-color:color-mix(in oklab, var(--accent) 40%, var(--line));color:var(--fg)}
 .chips.samples .chip{
@@ -3616,6 +3619,7 @@ select:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:2px 
   display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:start;
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
   padding:13px 14px;margin-bottom:9px;position:relative;overflow:hidden;box-shadow:var(--shadow);
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 .pair::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
 .pair.now::before{background:var(--warn)}
@@ -3661,12 +3665,19 @@ select:focus-visible,.chip:focus-visible,.tabs button:focus-visible{outline:2px 
 }
 .searchbar .clear:hover{color:var(--fg)}
 .scope{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.dayfilter{
+  display:flex;gap:6px;margin-top:14px;padding-bottom:2px;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.dayfilter::-webkit-scrollbar{display:none}
+.dayfilter .chip{flex:0 0 auto;min-width:0;padding:7px 11px;font-size:13px;border-radius:10px}
 .scope .chip,.scope .chip[aria-pressed="true"]{flex:0 0 auto}
 .sres{
   display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
   appearance:none;-webkit-appearance:none;
   background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:10px 12px;margin-bottom:7px;transition:.15s;
+  padding:10px 12px;margin-bottom:7px;
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 .sres:hover{border-color:color-mix(in oklab,var(--accent) 38%,var(--line));background:var(--card2)}
 .sres .top{display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:var(--dim)}
@@ -3715,11 +3726,42 @@ nav.bottom .inner{max-width:680px;margin:0 auto;display:flex;gap:8px}
 nav.bottom button{
   flex:1;appearance:none;border:1px solid transparent;background:transparent;color:var(--muted);
   font:inherit;font-size:12px;font-weight:650;padding:7px 4px;border-radius:12px;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:3px;transition:.15s;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:transform .15s ease, background .2s ease, border-color .2s ease, color .2s ease;
 }
+nav.bottom button:active{transform:scale(.94)}
 nav.bottom button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav.bottom button[aria-current="page"]{color:var(--fg);background:var(--card);border-color:var(--line)}
 nav.bottom button[aria-current="page"] svg{stroke:var(--accent)}
+
+/* ---------- motion ---------- */
+@keyframes viewInRight{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes viewInLeft{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#view.enter-right{animation:viewInRight .3s cubic-bezier(.22,.61,.36,1) both}
+#view.enter-left{animation:viewInLeft .3s cubic-bezier(.22,.61,.36,1) both}
+#view.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+#view.dragging .pair,#view.dragging .sres{transition:none}
+#view.anim > *{animation:riseIn .42s cubic-bezier(.22,.61,.36,1) both}
+#view.anim > *:nth-child(2){animation-delay:.04s}
+#view.anim > *:nth-child(3){animation-delay:.08s}
+#view.anim > *:nth-child(4){animation-delay:.12s}
+#view.anim > *:nth-child(5){animation-delay:.16s}
+#view.anim > *:nth-child(n+6){animation-delay:.2s}
+@media (hover:hover){
+  .pair:hover{transform:translateY(-1px);box-shadow:0 14px 34px -20px #000}
+  .sres:hover{transform:translateY(-1px)}
+}
+.pair:active{transform:scale(.995)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+}
 
 @media (max-width:460px){
   .brand p{display:none}
@@ -3741,9 +3783,9 @@ nav.bottom button[aria-current="page"] svg{stroke:var(--accent)}
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <div class="logo">СМУ</div>
+      <img class="logo" src="logo.jpg" alt="СМУШ" width="32" height="32">
       <div>
-        <h1>Расписание занятий</h1>
+        <h1>СМУШ</h1>
         <p>Самарское музыкальное училище им. Д.Г. Шаталова</p>
       </div>
       <div class="me" id="me"></div>
@@ -3838,6 +3880,23 @@ function entriesFor(pair, course, sub) {
   return list.filter(e => !e.subgroups.length || e.subgroups.includes(sub));
 }
 
+// реальные границы занятий группы: у пары может быть только 2-й час (8:55–9:40) и т.п.
+function pairSpan(pair, entries) {
+  let a = Infinity, b = -Infinity;
+  (entries || []).forEach(e => {
+    (e.hours || []).forEach(n => {
+      const h = pair.hours[n];
+      if (!h) return;
+      const s = toMin(h.start), z = toMin(h.end);
+      if (!Number.isNaN(s)) a = Math.min(a, s);
+      if (!Number.isNaN(z)) b = Math.max(b, z);
+    });
+  });
+  if (!isFinite(a)) a = toMin(pair.start);
+  if (!isFinite(b)) b = toMin(pair.end);
+  return { a, b };
+}
+
 function cleanSubject(s) {
   s = String(s || '').trim();
   // код начинается с заглавных букв/цифр, название — с заглавной+строчных
@@ -3929,9 +3988,9 @@ function renderSelectors() {
 /* ---------- render: pair card ---------- */
 function pairCard(pair, course, sub, kind, now) {
   const entries = entriesFor(pair, course, sub);
-  const single = entries.length === 1 && entries[0].hours.length === 1 ? pair.hours[entries[0].hours[0]] : null;
-  const start = hm(single ? single.start : pair.start);
-  const end = hm(single ? single.end : pair.end);
+  const span = pairSpan(pair, entries);
+  const start = fmtMin(span.a);
+  const end = fmtMin(span.b);
   if (!entries.length) {
     return `<article class="pair free ${kind === 'past' ? 'past' : ''}" style="grid-template-columns:64px 1fr">
       <div class="t"><div class="n">п. ${pair.n}</div><div class="a">${start}</div><div class="b">${end}</div></div>
@@ -3958,8 +4017,7 @@ function pairCard(pair, course, sub, kind, now) {
   let bar = '';
   if (kind === 'now') {
     badge = `<span class="badge">сейчас</span>`;
-    const s = toMin(pair.start), z = toMin(pair.end);
-    const pct = Math.max(0, Math.min(100, ((now - s) / (z - s)) * 100));
+    const pct = Math.max(0, Math.min(100, ((now - span.a) / (span.b - span.a)) * 100));
     bar = `<div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>`;
   } else if (kind === 'next') {
     badge = `<span class="badge">дальше</span>`;
@@ -3989,9 +4047,10 @@ function renderToday() {
   const pairs = day ? day.pairs : [];
   const mine = pairs.filter(p => entriesFor(p, state.course, state.sub).length);
 
-  // статус пары
+  // статус пары (по реальному времени занятий группы, а не по сетке пар)
+  const spanOf = p => pairSpan(p, entriesFor(p, state.course, state.sub));
   const stateOf = p => {
-    const a = toMin(p.start), b = toMin(p.end);
+    const { a, b } = spanOf(p);
     if (now >= b) return 'past';
     if (now >= a) return 'now';
     return 'future';
@@ -4003,24 +4062,26 @@ function renderToday() {
   let banner = '';
   if (live) {
     const e = entriesFor(live, state.course, state.sub)[0];
+    const sp = spanOf(live);
     banner = `<div class="nextbar live">
       <span class="dot"></span>
-      <div class="txt"><b>${esc(cleanSubject(e.subject).name)}</b>идёт до ${hm(live.end)}${e.room ? ' · ' + esc(e.room) : ''}</div>
-      <span class="time">${relative(toMin(live.end) - now).replace('через', 'ещё')}</span>
+      <div class="txt"><b>${esc(cleanSubject(e.subject).name)}</b>идёт до ${fmtMin(sp.b)}${e.room ? ' · ' + esc(e.room) : ''}</div>
+      <span class="time">${relative(sp.b - now).replace('через', 'ещё')}</span>
     </div>`;
   } else if (upcoming) {
     const e = entriesFor(upcoming, state.course, state.sub)[0];
+    const sp = spanOf(upcoming);
     banner = `<div class="nextbar">
       <span class="dot"></span>
-      <div class="txt"><b>${esc(cleanSubject(e.subject).name)}</b>в ${hm(upcoming.start)}${e.room ? ' · ' + esc(e.room) : ''}</div>
-      <span class="time">${relative(toMin(upcoming.start) - now)}</span>
+      <div class="txt"><b>${esc(cleanSubject(e.subject).name)}</b>в ${fmtMin(sp.a)}${e.room ? ' · ' + esc(e.room) : ''}</div>
+      <span class="time">${relative(sp.a - now)}</span>
     </div>`;
   } else {
     const nd = nextStudyDay(s, di);
     if (mine.length) {
-      banner = `<div class="nextbar idle"><span class="dot"></span><div class="txt"><b>На сегодня всё</b>следующие пары ${nd ? '— ' + DAYS[nd.idx] + ', ' + hm(nd.pair.start) : '— на следующей неделе'}</div></div>`;
+      banner = `<div class="nextbar idle"><span class="dot"></span><div class="txt"><b>На сегодня всё</b>следующие пары ${nd ? '— ' + DAYS[nd.idx] + ', ' + fmtMin(nd.start) : '— на следующей неделе'}</div></div>`;
     } else {
-      banner = `<div class="nextbar idle"><span class="dot"></span><div class="txt"><b>Сегодня пар нет</b>${nd ? 'ближайшие — ' + DAYS[nd.idx] + ', ' + hm(nd.pair.start) : 'свободно'}</div></div>`;
+      banner = `<div class="nextbar idle"><span class="dot"></span><div class="txt"><b>Сегодня пар нет</b>${nd ? 'ближайшие — ' + DAYS[nd.idx] + ', ' + fmtMin(nd.start) : 'свободно'}</div></div>`;
     }
   }
 
@@ -4069,7 +4130,7 @@ function nextStudyDay(s, di) {
     const d = dayFor(s, idx);
     if (!d) continue;
     const p = d.pairs.find(p => entriesFor(p, state.course, state.sub).length);
-    if (p) return { idx, pair: p };
+    if (p) return { idx, pair: p, start: pairSpan(p, entriesFor(p, state.course, state.sub)).a };
   }
   return null;
 }
@@ -4091,7 +4152,7 @@ function renderWeek() {
       <h3><span class="wd">${name}</span><span class="d">${date.getDate()} ${MONTHS[date.getMonth()]}</span>${idx === di ? '<span class="pill" style="margin-left:auto">сегодня</span>' : ''}</h3>`;
     if (!mine.length) html += `<div class="free">свободно</div>`;
     else html += mine.map(p => {
-      const a = toMin(p.start), b = toMin(p.end);
+      const { a, b } = pairSpan(p, entriesFor(p, state.course, state.sub));
       const kind = idx === di ? (now >= b ? 'past' : now >= a ? 'now' : 'future') : '';
       return pairCard(p, state.course, state.sub, kind, now);
     }).join('');
@@ -4109,7 +4170,8 @@ function renderInfo() {
         <li>Выбери специальность, курс и подгруппу — выбор сохранится на этом устройстве.</li>
         <li>«Сегодня» показывает только твои пары, текущую пару и сколько до следующей.</li>
         <li>«Неделя» — всё расписание целиком, ненужные дни не мешают.</li>
-        <li>«Поиск» находит предмет или преподавателя по всему училищу. Нажми на результат — откроется неделя этой группы.</li>
+        <li>«Поиск» находит предмет или преподавателя по всему училищу. Можно ограничить поиск днём недели. Нажми на результат — откроется неделя этой группы.</li>
+        <li>Вкладки переключаются свайпом влево или вправо.</li>
         <li>Работает без интернета. Можно добавить на главный экран телефона.</li>
       </ul>
     </section>
@@ -4126,6 +4188,7 @@ function renderInfo() {
 /* ---------- render: search ---------- */
 let searchQ = '';
 let searchScope = 'all';
+let searchDay = 'all';
 let searchLimit = 60;
 let IDX = null;
 
@@ -4242,12 +4305,14 @@ function renderResults() {
   const tokens = norm(searchQ).split(' ').filter(Boolean);
   if (!tokens.length) { box.innerHTML = searchEmpty(); return; }
 
+  const dayNum = searchDay === 'all' ? -1 : +searchDay;
   const found = scheduleIndex()
+    .filter(it => dayNum < 0 || it.di === dayNum)
     .filter(inScope)
     .filter(it => tokens.every(t => it.hay.includes(t)));
 
   if (!found.length) {
-    box.innerHTML = `<div class="empty" style="margin-top:16px"><span class="big">🤷</span>Ничего не найдено${searchScope === 'mine' ? '<br><button class="chip" id="allscope" style="margin-top:12px">Искать по всему училищу</button>' : ''}</div>`;
+    box.innerHTML = `<div class="empty" style="margin-top:16px"><span class="big">${dayNum >= 0 ? '🗓️' : '🤷'}</span>${dayNum >= 0 ? 'В этот день ничего не найдено' : 'Ничего не найдено'}${searchScope === 'mine' ? '<br><button class="chip" id="allscope" style="margin-top:12px">Искать по всему училищу</button>' : ''}</div>`;
     return;
   }
 
@@ -4267,6 +4332,10 @@ function renderResults() {
 
 function renderSearch() {
   $('#view').innerHTML = `
+    <div class="dayfilter" id="dayfilter" role="group" aria-label="День недели">
+      <button class="chip" data-day="all" aria-pressed="${searchDay === 'all'}">все дни</button>
+      ${DAYS_SHORT.slice(0, 6).map((d, i) => `<button class="chip" data-day="${i}" aria-pressed="${searchDay === String(i)}">${d}</button>`).join('')}
+    </div>
     <div class="searchbar">
       <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
       <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -4310,6 +4379,15 @@ function renderSearch() {
     };
   });
 
+  $$('#dayfilter [data-day]').forEach(b => {
+    b.onclick = () => {
+      searchDay = b.dataset.day;
+      searchLimit = 60;
+      $$('#dayfilter [data-day]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.day === searchDay)));
+      renderResults();
+    };
+  });
+
   $('#results').onclick = ev => {
     const sample = ev.target.closest('[data-sample]');
     if (sample) {
@@ -4347,16 +4425,29 @@ function renderSearch() {
 }
 
 /* ---------- orchestration ---------- */
-function render() {
+function render(dir) {
   renderSelectors();
   $('#setup').hidden = state.tab === 'info';
   const egg = $('.egg');
   if (egg) egg.hidden = state.tab !== 'info';
-  $('#view').innerHTML = '';
+  const view = $('#view');
+  view.classList.remove('dragging', 'enter-left', 'enter-right', 'anim');
+  clearTimeout(view._animTimer);
+  view.style.transition = '';
+  view.style.transform = '';
+  view.style.opacity = '';
+  view.style.animation = '';
+  view.innerHTML = '';
   if (state.tab === 'week') renderWeek();
   else if (state.tab === 'search') renderSearch();
   else if (state.tab === 'info') renderInfo();
   else renderToday();
+  void view.offsetWidth;
+  if (dir === 'left') view.classList.add('enter-left');
+  else if (dir === 'right') view.classList.add('enter-right');
+  else view.classList.add('anim');
+  clearTimeout(view._animTimer);
+  view._animTimer = setTimeout(() => view.classList.remove('anim', 'enter-left', 'enter-right'), 780);
   $$('[data-tab]').forEach(b => {
     const on = b.dataset.tab === state.tab;
     if (b.getAttribute('role') === 'tab') b.setAttribute('aria-selected', String(on));
@@ -4364,16 +4455,208 @@ function render() {
     else b.removeAttribute('aria-current');
   });
   $('#foot').innerHTML = `Расписание · ${esc(DATA.updated)}<br>Собрано из ${esc(DATA.source)}${DATA.built ? ' · ' + esc(DATA.built) : ''}`;
+  document.dispatchEvent(new CustomEvent('tabchange', { detail: state.tab }));
 }
 
 function persist() { store.save({ spec: state.spec, course: state.course, sub: state.sub, tab: state.tab }); }
 
 $$('[data-tab]').forEach(b => b.addEventListener('click', () => {
-  state.tab = b.dataset.tab;
-  persist();
-  render();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const order = ['today', 'week', 'search', 'info'];
+  const from = order.indexOf(state.tab), to = order.indexOf(b.dataset.tab);
+  if (to < 0 || to === from) {
+    if (to === from) window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  let x = 0;
+  try {
+    const cur = getComputedStyle($('#view')).transform;
+    if (cur && cur !== 'none') x = new DOMMatrixReadOnly(cur).m41;
+  } catch (err) {}
+  if (window.__slideTo) {
+    window.__slideTo(to, to > from ? 'right' : 'left', x);
+  } else {
+    state.tab = b.dataset.tab;
+    persist();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }));
+
+/* ---------- swipe: вкладки влево/вправо с «протягиванием» панели ---------- */
+(function () {
+  const TABS = ['today', 'week', 'search', 'info'];
+  const SKIP = 'input, textarea, select, option, [contenteditable="true"], .dayfilter';
+  const view = $('#view');
+  let sx = 0, sy = 0, tracking = false, dragging = false, lastX = 0;
+  let suppressClick = false, clickTimer = 0, resetTimer = 0, slideTimer = 0;
+
+  const width = () => Math.min(window.innerWidth || 360, 680);
+  const tabIndex = () => TABS.indexOf(state.tab);
+
+  function resetStyles() {
+    clearTimeout(resetTimer);
+    view.classList.remove('dragging');
+    view.style.transition = '';
+    view.style.transform = '';
+    view.style.opacity = '';
+  }
+
+  function snapBack() {
+    view.style.transition = 'transform .3s cubic-bezier(.22,.61,.36,1)';
+    view.style.transform = '';
+    view.style.opacity = '';
+    resetTimer = setTimeout(resetStyles, 320);
+  }
+
+  function haptic() {
+    try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (err) {}
+  }
+
+  // точная копия текущей панели поверх страницы: она уезжает, открывая новую вкладку
+  function makeGhost(x) {
+    const rect = view.getBoundingClientRect();
+    const ghost = view.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+    ghost.classList.remove('dragging', 'anim', 'enter-left', 'enter-right');
+    ghost.classList.add('swipe-ghost');
+
+    const src = view.querySelectorAll('input, textarea, select');
+    ghost.querySelectorAll('input, textarea, select').forEach((el, i) => {
+      const from = src[i];
+      if (!from) return;
+      if ('value' in el) el.value = from.value;
+      if (el.tagName === 'SELECT') el.selectedIndex = from.selectedIndex;
+    });
+
+    ghost.style.cssText = '';
+    Object.assign(ghost.style, {
+      position: 'fixed',
+      left: rect.left + 'px',
+      top: rect.top + 'px',
+      width: rect.width + 'px',
+      margin: '0',
+      padding: '0',
+      pointerEvents: 'none',
+      zIndex: '25',
+      transform: `translateX(${x}px)`,
+      transition: 'none'
+    });
+    document.body.appendChild(ghost);
+    return { ghost, rect };
+  }
+
+  function slideTo(next, dir, x) {
+    document.querySelectorAll('.swipe-ghost').forEach(g => g.remove());
+    const { ghost, rect } = makeGhost(x);
+    const W = rect.width;
+    const newStart = dir === 'right' ? x + W : x - W;
+    const ghostEnd = x - newStart;
+
+    state.tab = TABS[next];
+    persist();
+    render(dir);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    haptic();
+
+    // новая вкладка стоит вплотную к старой и едет вместе с ней — как в карусели
+    view.classList.remove('enter-left', 'enter-right', 'anim');
+    view.style.animation = 'none';
+    view.style.transition = 'none';
+    view.style.transform = `translateX(${newStart}px)`;
+    void view.offsetWidth;
+
+    const ease = 'transform .32s cubic-bezier(.22,.61,.36,1)';
+    ghost.style.transition = ease;
+    ghost.style.transform = `translateX(${ghostEnd}px)`;
+    view.style.transition = ease;
+    view.style.transform = 'translateX(0)';
+
+    setTimeout(() => ghost.remove(), 420);
+    clearTimeout(slideTimer);
+    slideTimer = setTimeout(() => {
+      view.style.transition = '';
+      view.style.transform = '';
+      view.style.animation = '';
+      view.style.opacity = '';
+    }, 380);
+  }
+
+  window.__slideTo = slideTo;
+
+  view.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target.closest(SKIP)) return;
+    clearTimeout(resetTimer);
+    clearTimeout(clickTimer);
+    clearTimeout(slideTimer);
+    suppressClick = false;
+    sx = e.clientX; sy = e.clientY;
+    tracking = true; dragging = false;
+    view.classList.remove('dragging', 'enter-left', 'enter-right', 'anim');
+    view.style.transition = '';
+    view.style.transform = '';
+    view.style.opacity = '';
+  });
+
+  view.addEventListener('pointermove', e => {
+    if (!tracking) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!dragging) {
+      if (Math.abs(dx) < 7) return;
+      if (Math.abs(dx) <= Math.abs(dy) * 1.2) return; // жест больше похож на вертикальный скролл
+      dragging = true;
+      suppressClick = true;
+      document.querySelectorAll('.swipe-ghost').forEach(g => g.remove());
+      view.classList.add('dragging');
+      view.style.transition = 'none';
+    }
+    const i = tabIndex();
+    const edge = (dx < 0 && i >= TABS.length - 1) || (dx > 0 && i <= 0);
+    const max = width() * 0.72;
+    const x = Math.max(-max, Math.min(max, dx * (edge ? 0.26 : 1)));
+    lastX = x;
+    view.style.transform = `translateX(${x}px)`;
+  });
+
+  window.addEventListener('pointerup', e => {
+    if (!tracking) return;
+    tracking = false;
+    const wasDragging = dragging;
+    dragging = false;
+    if (!wasDragging) return;
+
+    clickTimer = setTimeout(() => { suppressClick = false; }, 300);
+
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    const i = tabIndex();
+    const threshold = Math.min(96, width() * 0.2);
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+    const canMove = (dx < 0 && i < TABS.length - 1) || (dx > 0 && i > 0);
+
+    if (horizontal && Math.abs(dx) > threshold && canMove) {
+      slideTo(dx < 0 ? i + 1 : i - 1, dx < 0 ? 'right' : 'left', lastX);
+    } else {
+      snapBack();
+    }
+  });
+
+  window.addEventListener('pointercancel', () => {
+    if (!tracking) return;
+    tracking = false;
+    dragging = false;
+    snapBack();
+  });
+
+  // после протягивания не даём случайному клику открыть карточку
+  view.addEventListener('click', e => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    clearTimeout(clickTimer);
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+})();
 
 render();
 const egg = $('#eggpix');
@@ -4449,6 +4732,8 @@ setInterval(() => {
       window.scrollTo({ top: 0 });
       sync();
     });
+
+    document.addEventListener('tabchange', sync);
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function (b) {
       b.addEventListener('click', function () {
